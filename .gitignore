@@ -32,3 +32,7 @@ data/
 .venv/
 .idea/
 metastore_db/
+data_sink/
+spark-warehouse/
+
+*.log
