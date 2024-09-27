@@ -1,7 +1,7 @@
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as f
 
-BASE_PATH_ORDERS_DF = "../../data/restaurants"
+BASE_PATH_DF = "../../data/restaurants"
 
 spark = (SparkSession
          .builder
@@ -13,7 +13,7 @@ restaurants_wake_df = (spark
                        .read
                        .format("csv")
                        .option("header", "true")
-                       .load(f"{BASE_PATH_ORDERS_DF}/Restaurants_in_Wake_County.csv"))
+                       .load(f"{BASE_PATH_DF}/Restaurants_in_Wake_County.csv"))
 
 print(f"Number of restaurants in Wake: {restaurants_wake_df.count()}")
 print(f"Number of partitions in this dataset: {restaurants_wake_df.rdd.getNumPartitions()}")
@@ -46,7 +46,7 @@ restaurants_wake_cleaned_df = (restaurants_wake_df
 restaurants_durham_df = (spark
                          .read
                          .format("json")
-                         .load(f"{BASE_PATH_ORDERS_DF}/Restaurants_in_Durham_County_NC.json"))
+                         .load(f"{BASE_PATH_DF}/Restaurants_in_Durham_County_NC.json"))
 
 print(f"Number of restaurants in Durham: {restaurants_durham_df.count()}")
 print(f"Number of partitions in this dataset: {restaurants_durham_df.rdd.getNumPartitions()}")
