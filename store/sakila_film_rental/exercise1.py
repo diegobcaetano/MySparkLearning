@@ -76,6 +76,8 @@ films_by_categories = (film_df
 
 # V. Spending accumulated of a customer by month (customer_id: 148 OR 526 OR 144 OR 236
 
+customer_year_window = Window.partitionBy("rental_year").orderBy("rental_month")
+
 customer_rentals_and_value_df = (rental_df
                                  .alias('rentals')
                                  .join(film_df.alias('films'), film_df['film_id'] == rental_df['film_id'])
@@ -84,13 +86,27 @@ customer_rentals_and_value_df = (rental_df
                                  .withColumn('rental_month', f.month('rental_date'))
                                  .withColumn('rental_year', f.year('rental_date')))
 
-film_window = (Window.partitionBy('film_id').orderBy('rental_month'))
-
-
-# Q. Top 10 rented movies of each year and month
-
 (customer_rentals_and_value_df
- .groupBy('film_id', 'rental_year', 'rental_month')
- .count()
+ .filter(f.col('customer_id') == 148)
+ .groupBy('rental_year', 'rental_month')
+ .agg(f.sum('rental_rate').alias('expending'))
+ .withColumn('expending_accumulated', f.sum('expending').over(customer_year_window))
  .orderBy('rental_year', 'rental_month')
  .show())
+
+# Q. Top 10 rented movies of each month
+
+films_rental_by_month = (customer_rentals_and_value_df
+                         .groupBy('film_id', 'rental_year', 'rental_month')
+                         .count()
+                         .orderBy('rental_year', 'rental_month'))
+
+# Creating a window to order the rental count within a year and month
+ym_window_order_by_count = Window.partitionBy("rental_year", "rental_month").orderBy(f.desc("count"))
+
+top10_movies = (films_rental_by_month.withColumn("rank", f.row_number().over(ym_window_order_by_count))
+                .filter(f.col("rank") <= 10)
+                .select("film_id", "rental_year", "rental_month", "count"))
+
+# Q. The films which are in top 10 of the month more than once
+top10_movies.groupBy('film_id').count().filter(f.expr('count > 1')).orderBy(f.desc('count'))
