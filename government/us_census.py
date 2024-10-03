@@ -40,3 +40,49 @@ intermediate_df = (intermediate_df
                    .drop('countyState'))
 
 intermediate_df.sample(.01).show(10, False)
+
+higher_ed_df = (spark
+                .read
+                .format("csv")
+                .option("inferSchema", "true")
+                .option("header", "true")
+                .load(f"{BASEPATH}/InstitutionCampus.csv"))
+
+higher_ed_df = (higher_ed_df
+                .filter("LocationType = 'Institution'")
+                .withColumn("addressElements", f.split("Address", " "))
+                .withColumn("zip", f.element_at("addressElements", -1))
+                .withColumn("splitZip", f.split("zip", "-"))
+                .dropna(subset=["splitZip"])
+                .withColumn("zip", f.col("splitZip").getItem(0))
+                .drop("addressElements")
+                .drop("DapipId")
+                .drop("splitZip"))
+
+county_zip_df = (spark
+                 .read
+                 .format("csv")
+                 .option("inferSchema", "true")
+                 .option("header", "true")
+                 .load(f"{BASEPATH}/COUNTY_ZIP_092018.csv"))
+
+county_zip_df = (county_zip_df
+                 .drop("res_ratio")
+                 .drop("bus_ratio")
+                 .drop("oth_ratio")
+                 .drop("tot_ratio"))
+
+higher_ed_with_county_df = (higher_ed_df
+                            .alias('he')
+                            .join(county_zip_df.alias('c'), county_zip_df['zip'] == higher_ed_df['zip'])
+                            .select('he.LocationName', 'he.zip', 'c.county')
+                            .withColumn('county', f.expr('int(county/1000)'))
+                            .withColumnRenamed('LocationName', 'institution'))
+
+higher_ed_with_county_df.show()
+
+final_df = (higher_ed_with_county_df
+            .alias('hewc')
+            .join(intermediate_df.alias('i'), intermediate_df['county'] == higher_ed_with_county_df['county'])
+            .select('i.*', 'hewc.zip', 'hewc.institution')
+            .show())
