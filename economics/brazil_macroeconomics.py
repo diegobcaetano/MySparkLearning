@@ -8,7 +8,7 @@ spark = (SparkSession
          .appName("Brazil Economics")
          .master("local[3]")
          .getOrCreate())
-f.wee
+
 df = (spark
       .read
       .format("csv")
